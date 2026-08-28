@@ -21,7 +21,7 @@ else
     -v "$ROOT/frontend":/frontend \
     -w /frontend \
     instrumentisto/flutter:3.32.8 \
-    bash -lc "flutter pub get && flutter build web --release --base-href /"
+    bash -lc "flutter pub get && flutter build web --release --base-href / --no-web-resources-cdn"
   rm -rf dist/static
   cp -a frontend/build/web dist/static
 fi
