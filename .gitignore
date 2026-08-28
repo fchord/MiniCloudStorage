@@ -1,0 +1,27 @@
+# secrets
+deploy/postgres/.app_password
+deploy/postgres/.init.local.sql
+deploy/postgres/.pgpass
+deploy/k8s/secret.local.yaml
+*.pem
+
+# build artifacts
+dist/
+backend/minicloudstorage
+frontend/.dart_tool/
+frontend/.flutter-plugins
+frontend/.flutter-plugins-dependencies
+frontend/.packages
+frontend/.pub-cache/
+frontend/build/
+frontend/.idea/
+frontend/*.iml
+
+# go
+backend/vendor/
+
+# ide
+.idea/
+.vscode/
+*.swp
+.DS_Store

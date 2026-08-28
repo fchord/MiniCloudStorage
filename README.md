@@ -1,0 +1,43 @@
+# MiniCloudStorage
+
+匿名临时网盘：文件保存 7 天，单文件最大 1GB，上传后用短码访问。
+
+公网地址：https://minicloudstorage.19121122.xyz
+
+## 隔离约定
+
+本仓库只使用下列边界，避免和同一套 K8s / PostgreSQL / SeaweedFS 上的其它项目混数据：
+
+| 资源 | 名称 |
+| --- | --- |
+| Kubernetes namespace | `minicloudstorage` |
+| PostgreSQL database / role | `minicloudstorage` |
+| SeaweedFS collection | `minicloudstorage` |
+| SeaweedFS Filer 前缀 | `/minicloudstorage/`（`files/` 正式文件，`tmp/` 分片） |
+| nginx vhost | `minicloudstorage.19121122.xyz`（独立 conf，不改其它 server） |
+
+不要把工作负载放到 `default`，不要往公共 `postgres` 库建表，不要往 Filer 根目录写文件。
+
+## 目录
+
+- `backend/` Go API（分块上传、明文密码、流式下载、过期清理）
+- `frontend/` Flutter Web
+- `deploy/k8s/` Namespace、Quota、Deployment、CronJob
+- `deploy/postgres/init.sh` 创建独立库和用户
+- `deploy/nginx/` 独立 vhost；`nginx-test-pod.yaml` 把 conf 挂进现有 nginx-test
+
+## 本机构建与部署（当前集群）
+
+在 `k8s-master`（192.168.43.111）上：
+
+```bash
+bash deploy/postgres/init.sh
+bash scripts/build.sh
+bash scripts/deploy.sh
+```
+
+当前集群没有项目镜像仓库，API 以 `hostPath` 挂载 `dist/` 跑在 master 上（`hostNetwork`，便于访问本机 PostgreSQL）。镜像名约定仍为 `minicloudstorage/api`，Dockerfile 已提供。
+
+## 配置
+
+应用通过环境变量读取连接信息。`DATABASE_URL` 放在 namespace 内 Secret `postgres`，不要写进公共 ConfigMap。

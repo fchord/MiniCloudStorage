@@ -1,0 +1,161 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: api
+  namespace: minicloudstorage
+  labels:
+    app.kubernetes.io/part-of: minicloudstorage
+    app.kubernetes.io/name: api
+spec:
+  replicas: 1
+  strategy:
+    type: Recreate
+  selector:
+    matchLabels:
+      app.kubernetes.io/part-of: minicloudstorage
+      app.kubernetes.io/name: api
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/part-of: minicloudstorage
+        app.kubernetes.io/name: api
+    spec:
+      serviceAccountName: minicloudstorage
+      nodeSelector:
+        kubernetes.io/hostname: k8s-master
+      hostNetwork: true
+      dnsPolicy: ClusterFirstWithHostNet
+      containers:
+        - name: api
+          image: alpine:3.20
+          imagePullPolicy: IfNotPresent
+          command: ["/app/minicloudstorage"]
+          workingDir: /app
+          ports:
+            - name: http
+              containerPort: 18080
+          env:
+            - name: LISTEN_ADDR
+              value: ":18080"
+            - name: PUBLIC_BASE_URL
+              value: "https://minicloudstorage.19121122.xyz"
+            - name: STATIC_DIR
+              value: "/app/static"
+            - name: SEAWEEDFS_FILER_URL
+              value: "http://seaweedfs-filer.default.svc.cluster.local:8888"
+            - name: SEAWEEDFS_PREFIX
+              value: "/minicloudstorage"
+            - name: SEAWEEDFS_COLLECTION
+              value: "minicloudstorage"
+            - name: DATABASE_URL
+              valueFrom:
+                secretKeyRef:
+                  name: postgres
+                  key: url
+          resources:
+            requests:
+              cpu: 50m
+              memory: 128Mi
+            limits:
+              cpu: 500m
+              memory: 512Mi
+          readinessProbe:
+            httpGet:
+              path: /api/v1/health
+              port: 18080
+            initialDelaySeconds: 3
+            periodSeconds: 10
+          livenessProbe:
+            httpGet:
+              path: /api/v1/health
+              port: 18080
+            initialDelaySeconds: 10
+            periodSeconds: 20
+          volumeMounts:
+            - name: app
+              mountPath: /app
+              readOnly: true
+      volumes:
+        - name: app
+          hostPath:
+            path: /home/liuzhi/work/mini_cloud_storage/dist
+            type: Directory
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: api
+  namespace: minicloudstorage
+  labels:
+    app.kubernetes.io/part-of: minicloudstorage
+    app.kubernetes.io/name: api
+spec:
+  selector:
+    app.kubernetes.io/part-of: minicloudstorage
+    app.kubernetes.io/name: api
+  ports:
+    - name: http
+      port: 8080
+      targetPort: 18080
+---
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: cleanup
+  namespace: minicloudstorage
+  labels:
+    app.kubernetes.io/part-of: minicloudstorage
+    app.kubernetes.io/name: cleanup
+spec:
+  schedule: "10 * * * *"
+  concurrencyPolicy: Forbid
+  successfulJobsHistoryLimit: 2
+  failedJobsHistoryLimit: 3
+  jobTemplate:
+    spec:
+      template:
+        metadata:
+          labels:
+            app.kubernetes.io/part-of: minicloudstorage
+            app.kubernetes.io/name: cleanup
+        spec:
+          serviceAccountName: minicloudstorage
+          restartPolicy: OnFailure
+          nodeSelector:
+            kubernetes.io/hostname: k8s-master
+          hostNetwork: true
+          dnsPolicy: ClusterFirstWithHostNet
+          containers:
+            - name: cleanup
+              image: alpine:3.20
+              imagePullPolicy: IfNotPresent
+              command: ["/app/minicloudstorage", "-cleanup"]
+              workingDir: /app
+              env:
+                - name: SEAWEEDFS_FILER_URL
+                  value: "http://seaweedfs-filer.default.svc.cluster.local:8888"
+                - name: SEAWEEDFS_PREFIX
+                  value: "/minicloudstorage"
+                - name: SEAWEEDFS_COLLECTION
+                  value: "minicloudstorage"
+                - name: DATABASE_URL
+                  valueFrom:
+                    secretKeyRef:
+                      name: postgres
+                      key: url
+              resources:
+                requests:
+                  cpu: 20m
+                  memory: 64Mi
+                limits:
+                  cpu: 200m
+                  memory: 256Mi
+              volumeMounts:
+                - name: app
+                  mountPath: /app
+                  readOnly: true
+          volumes:
+            - name: app
+              hostPath:
+                path: /home/liuzhi/work/mini_cloud_storage/dist
+                type: Directory

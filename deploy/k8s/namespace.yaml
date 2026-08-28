@@ -1,0 +1,54 @@
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: minicloudstorage
+  labels:
+    app.kubernetes.io/part-of: minicloudstorage
+---
+apiVersion: v1
+kind: ResourceQuota
+metadata:
+  name: minicloudstorage-quota
+  namespace: minicloudstorage
+  labels:
+    app.kubernetes.io/part-of: minicloudstorage
+spec:
+  hard:
+    pods: "8"
+    requests.cpu: "1"
+    requests.memory: 1Gi
+    limits.cpu: "2"
+    limits.memory: 1Gi
+    persistentvolumeclaims: "1"
+    services: "4"
+    secrets: "8"
+    configmaps: "8"
+---
+apiVersion: v1
+kind: LimitRange
+metadata:
+  name: minicloudstorage-limits
+  namespace: minicloudstorage
+  labels:
+    app.kubernetes.io/part-of: minicloudstorage
+spec:
+  limits:
+    - type: Container
+      default:
+        cpu: "500m"
+        memory: 512Mi
+      defaultRequest:
+        cpu: "50m"
+        memory: 128Mi
+      max:
+        cpu: "1"
+        memory: 1Gi
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: minicloudstorage
+  namespace: minicloudstorage
+  labels:
+    app.kubernetes.io/part-of: minicloudstorage
+    app.kubernetes.io/name: api

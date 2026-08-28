@@ -1,0 +1,18 @@
+# Shared SeaweedFS adapter: expose Filer HTTP to the cluster.
+# Lives in default next to seaweedfs-s3. Application data still only uses /minicloudstorage/.
+apiVersion: v1
+kind: Service
+metadata:
+  name: seaweedfs-filer
+  namespace: default
+  labels:
+    app: seaweedfs
+    app.kubernetes.io/part-of: minicloudstorage
+spec:
+  selector:
+    app: seaweedfs
+  ports:
+    - name: filer
+      port: 8888
+      targetPort: 8888
+      protocol: TCP

@@ -1,0 +1,10 @@
+{
+  "name": "MiniCloudStorage",
+  "short_name": "MiniCloud",
+  "start_url": ".",
+  "display": "standalone",
+  "background_color": "#F4F6F8",
+  "theme_color": "#0F766E",
+  "description": "Temporary file sharing",
+  "orientation": "any"
+}
