@@ -8,19 +8,21 @@ import (
 )
 
 type Config struct {
-	ListenAddr      string
-	DatabaseURL     string
-	FilerURL        string
-	FilerPrefix     string
-	Collection      string
-	ChunkSize       int64
-	MaxSize         int64
-	PublicBaseURL   string
-	StaticDir       string
-	FileTTL         time.Duration
-	SessionTTL      time.Duration
-	SeaweedFileTTL  string
-	SeaweedTmpTTL   string
+	ListenAddr     string
+	DatabaseURL    string
+	FilerURL       string
+	FilerPrefix    string
+	Collection     string
+	ChunkSize      int64
+	MaxSize        int64
+	PublicBaseURL  string
+	StaticDir      string
+	FileTTL        time.Duration
+	SessionTTL     time.Duration
+	RecordTTL      time.Duration
+	SeaweedFileTTL string
+	SeaweedTmpTTL  string
+	AdminPassword  string
 }
 
 func Load() (Config, error) {
@@ -34,8 +36,10 @@ func Load() (Config, error) {
 		StaticDir:      env("STATIC_DIR", "/app/static"),
 		FileTTL:        7 * 24 * time.Hour,
 		SessionTTL:     24 * time.Hour,
+		RecordTTL:      31 * 24 * time.Hour,
 		SeaweedFileTTL: env("SEAWEEDFS_FILE_TTL", "8d"),
 		SeaweedTmpTTL:  env("SEAWEEDFS_TMP_TTL", "2d"),
+		AdminPassword:  os.Getenv("ADMIN_PASSWORD"),
 	}
 	var err error
 	cfg.ChunkSize, err = envInt("CHUNK_SIZE", 8<<20)

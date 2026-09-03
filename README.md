@@ -36,7 +36,9 @@ bash scripts/build.sh
 bash scripts/deploy.sh
 ```
 
-当前集群没有项目镜像仓库，API 以 `hostPath` 挂载 `dist/` 跑在 master 上（`hostNetwork`，便于访问本机 PostgreSQL）。镜像名约定仍为 `minicloudstorage/api`，Dockerfile 已提供。
+当前集群没有项目镜像仓库。API 是 namespace `minicloudstorage` 里的普通 Pod（ClusterIP），用 `hostPath` 挂 master 上的 `dist/`；镜像仍是 `alpine:3.20`，约定名 `minicloudstorage/api`，Dockerfile 已提供。PostgreSQL 在 master 本机 `192.168.43.111:5432`，不在集群里。
+
+公网只走 Cloudflare 隧道域名；nginx 只认 Host `minicloudstorage.19121122.xyz` 和内网 `192.168.43.111`。管理维护页 `/admin/setup` 仅后者可开。
 
 ## 配置
 

@@ -1,6 +1,7 @@
 package storage
 
 import (
+	"bytes"
 	"context"
 	"encoding/json"
 	"fmt"
@@ -27,6 +28,13 @@ func NewFiler(base, prefix, collection string) *Filer {
 		collection: collection,
 		client: &http.Client{
 			Timeout: 0,
+			Transport: &http.Transport{
+				Proxy:               http.ProxyFromEnvironment,
+				MaxIdleConns:        64,
+				MaxIdleConnsPerHost: 16,
+				IdleConnTimeout:     90 * time.Second,
+				ForceAttemptHTTP2:   true,
+			},
 		},
 	}
 }
@@ -45,11 +53,45 @@ func (f *Filer) FilePath(code string) string {
 	return f.prefix + "/files/" + code
 }
 
-func (f *Filer) Put(ctx context.Context, objectPath string, body io.Reader, size int64, contentType, ttl string) error {
+// Put writes body to Filer. filerMs is HTTP POST duration only (client.Do),
+// including timeouts; it is 0 if the POST never started.
+func (f *Filer) Put(ctx context.Context, objectPath string, body io.Reader, size int64, contentType, ttl string) (filerMs int64, err error) {
 	if !f.allowed(objectPath) {
-		return fmt.Errorf("refusing to write outside prefix %s: %s", f.prefix, objectPath)
+		return 0, fmt.Errorf("refusing to write outside prefix %s: %s", f.prefix, objectPath)
 	}
-	u := f.base + path.Clean(objectPath)
+	if size >= 0 && size <= 16<<20 {
+		return f.putBuffered(ctx, objectPath, body, size, ttl)
+	}
+	return f.putStream(ctx, objectPath, body, ttl)
+}
+
+func (f *Filer) putBuffered(ctx context.Context, objectPath string, body io.Reader, size int64, ttl string) (int64, error) {
+	var buf bytes.Buffer
+	mw := multipart.NewWriter(&buf)
+	part, err := mw.CreateFormFile("file", path.Base(objectPath))
+	if err != nil {
+		return 0, err
+	}
+	if _, err := io.CopyN(part, body, size); err != nil && err != io.EOF {
+		return 0, err
+	}
+	if err := mw.Close(); err != nil {
+		return 0, err
+	}
+	req, err := http.NewRequestWithContext(ctx, http.MethodPost, f.base+path.Clean(objectPath), bytes.NewReader(buf.Bytes()))
+	if err != nil {
+		return 0, err
+	}
+	req.Header.Set("Content-Type", mw.FormDataContentType())
+	req.Header.Set("Seaweed-Collection", f.collection)
+	if ttl != "" {
+		req.Header.Set("Seaweed-TTL", ttl)
+	}
+	req.ContentLength = int64(buf.Len())
+	return f.doPut(req, objectPath)
+}
+
+func (f *Filer) putStream(ctx context.Context, objectPath string, body io.Reader, ttl string) (int64, error) {
 	pr, pw := io.Pipe()
 	mw := multipart.NewWriter(pw)
 	go func() {
@@ -71,26 +113,32 @@ func (f *Filer) Put(ctx context.Context, objectPath string, body io.Reader, size
 			err = e
 		}
 	}()
-	req, err := http.NewRequestWithContext(ctx, http.MethodPost, u, pr)
+	req, err := http.NewRequestWithContext(ctx, http.MethodPost, f.base+path.Clean(objectPath), pr)
 	if err != nil {
-		return err
+		return 0, err
 	}
 	req.Header.Set("Content-Type", mw.FormDataContentType())
 	req.Header.Set("Seaweed-Collection", f.collection)
 	if ttl != "" {
 		req.Header.Set("Seaweed-TTL", ttl)
 	}
+	return f.doPut(req, objectPath)
+}
+
+func (f *Filer) doPut(req *http.Request, objectPath string) (int64, error) {
+	start := time.Now()
 	resp, err := f.client.Do(req)
+	filerMs := time.Since(start).Milliseconds()
 	if err != nil {
-		return err
+		return filerMs, err
 	}
 	defer resp.Body.Close()
 	if resp.StatusCode >= 300 {
 		msg, _ := io.ReadAll(io.LimitReader(resp.Body, 2048))
-		return fmt.Errorf("filer put %s: %s %s", objectPath, resp.Status, strings.TrimSpace(string(msg)))
+		return filerMs, fmt.Errorf("filer put %s: %s %s", objectPath, resp.Status, strings.TrimSpace(string(msg)))
 	}
 	_, _ = io.Copy(io.Discard, resp.Body)
-	return nil
+	return filerMs, nil
 }
 
 func (f *Filer) Get(ctx context.Context, objectPath string) (io.ReadCloser, int64, string, error) {
@@ -145,6 +193,11 @@ func (f *Filer) Concat(ctx context.Context, srcPaths []string, dest string, tota
 	go func() {
 		defer pw.Close()
 		for _, p := range srcPaths {
+			if err := ctx.Err(); err != nil {
+				pw.CloseWithError(err)
+				errCh <- err
+				return
+			}
 			body, _, _, err := f.Get(ctx, p)
 			if err != nil {
 				pw.CloseWithError(err)
@@ -161,7 +214,7 @@ func (f *Filer) Concat(ctx context.Context, srcPaths []string, dest string, tota
 		}
 		errCh <- nil
 	}()
-	putErr := f.Put(ctx, dest, pr, totalSize, contentType, ttl)
+	_, putErr := f.Put(ctx, dest, pr, totalSize, contentType, ttl)
 	readErr := <-errCh
 	if putErr != nil {
 		return putErr

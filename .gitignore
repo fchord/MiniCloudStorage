@@ -3,6 +3,8 @@ deploy/postgres/.app_password
 deploy/postgres/.init.local.sql
 deploy/postgres/.pgpass
 deploy/k8s/secret.local.yaml
+deploy/k8s/admin.secret.local.yaml
+deploy/k8s/.admin_password
 *.pem
 
 # build artifacts
@@ -25,3 +27,9 @@ backend/vendor/
 .vscode/
 *.swp
 .DS_Store
+
+# local env / logs
+.env
+.env.*
+s3.json
+*.log

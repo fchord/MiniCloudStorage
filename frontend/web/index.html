@@ -12,15 +12,68 @@
   <meta name="apple-mobile-web-app-title" content="MiniCloudStorage">
   <title>MiniCloudStorage</title>
   <link rel="manifest" href="manifest.json">
+  <link rel="preload" href="assets/assets/fonts/NotoSansSC-Regular.otf" as="font" type="font/otf" crossorigin>
   <style>
+    @font-face {
+      font-family: 'Noto Sans SC';
+      src: url('assets/assets/fonts/NotoSansSC-Regular.otf') format('opentype');
+      font-display: swap;
+    }
     html, body {
       height: 100%;
       margin: 0;
       background: #f4f6f8;
     }
+    #boot-mask {
+      position: fixed;
+      inset: 0;
+      z-index: 99999;
+      background: #f4f6f8;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 10px;
+      font-family: 'Noto Sans SC', sans-serif;
+      color: #0f766e;
+      font-size: 16px;
+      letter-spacing: 0.04em;
+      cursor: pointer;
+      user-select: none;
+    }
+    #boot-mask .hint {
+      font-size: 13px;
+      color: #5b6b73;
+      letter-spacing: 0;
+    }
   </style>
 </head>
 <body>
-  <script src="flutter_bootstrap.js" async></script>
+  <div id="boot-mask">正在加载…<span class="hint">点此进入</span></div>
+  <script>
+    (function () {
+      function hideBootMask() {
+        var el = document.getElementById('boot-mask');
+        if (el) el.remove();
+      }
+      window.hideBootMask = hideBootMask;
+      var mask = document.getElementById('boot-mask');
+      if (mask) {
+        mask.addEventListener('click', hideBootMask);
+        mask.addEventListener('keydown', function (e) {
+          if (e.key === 'Enter' || e.key === ' ') hideBootMask();
+        });
+      }
+      // Cover until Dart binds Noto (deep-link FilePage). Not infinite:
+      // FontLoader is capped in Dart; this is only a last-resort uncover.
+      setTimeout(hideBootMask, 5000);
+      if ('serviceWorker' in navigator) {
+        navigator.serviceWorker.getRegistrations().then(function (regs) {
+          regs.forEach(function (r) { r.unregister(); });
+        }).catch(function () {});
+      }
+    })();
+  </script>
+  <script src="flutter_bootstrap.js"></script>
 </body>
 </html>

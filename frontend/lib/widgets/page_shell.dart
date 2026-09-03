@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
+import 'package:minicloudstorage/app_fonts.dart';
 
 class PageShell extends StatelessWidget {
   const PageShell({
@@ -19,7 +20,7 @@ class PageShell extends StatelessWidget {
       appBar: AppBar(
         title: InkWell(
           onTap: () => context.go('/'),
-          child: const Text('MiniCloudStorage'),
+          child: const Text('MiniCloudStorage', style: kNotoTextStyle),
         ),
       ),
       body: LayoutBuilder(
@@ -38,9 +39,15 @@ class PageShell extends StatelessWidget {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text(title, style: Theme.of(context).textTheme.headlineSmall),
+                    CjkText(
+                      title,
+                      style: Theme.of(context).textTheme.headlineSmall?.merge(kNotoTextStyle),
+                    ),
                     const SizedBox(height: 8),
-                    Text(subtitle, style: Theme.of(context).textTheme.bodyMedium),
+                    CjkText(
+                      subtitle,
+                      style: Theme.of(context).textTheme.bodyMedium?.merge(kNotoTextStyle),
+                    ),
                     const SizedBox(height: 24),
                     child,
                   ],

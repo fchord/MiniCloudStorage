@@ -23,8 +23,6 @@ spec:
       serviceAccountName: minicloudstorage
       nodeSelector:
         kubernetes.io/hostname: k8s-master
-      hostNetwork: true
-      dnsPolicy: ClusterFirstWithHostNet
       containers:
         - name: api
           image: alpine:3.20
@@ -52,6 +50,11 @@ spec:
                 secretKeyRef:
                   name: postgres
                   key: url
+            - name: ADMIN_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: admin
+                  key: password
           resources:
             requests:
               cpu: 50m
@@ -123,8 +126,6 @@ spec:
           restartPolicy: OnFailure
           nodeSelector:
             kubernetes.io/hostname: k8s-master
-          hostNetwork: true
-          dnsPolicy: ClusterFirstWithHostNet
           containers:
             - name: cleanup
               image: alpine:3.20

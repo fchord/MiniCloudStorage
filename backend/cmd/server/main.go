@@ -33,18 +33,25 @@ func main() {
 	}
 	defer store.Close()
 
-	if err := store.Migrate(ctx, db.SchemaSQL); err != nil {
+	if err := store.RunMigrations(ctx); err != nil {
 		log.Fatalf("migrate: %v", err)
 	}
 
 	filer := storage.NewFiler(cfg.FilerURL, cfg.FilerPrefix, cfg.Collection)
 	h := api.New(cfg, store, filer)
+	if err := h.EnsureAdmin(ctx); err != nil {
+		log.Fatalf("admin account: %v", err)
+	}
 
 	if *cleanupOnly {
 		if err := h.Cleanup(ctx); err != nil {
 			log.Fatalf("cleanup: %v", err)
 		}
 		return
+	}
+
+	if err := h.ExpireDue(ctx); err != nil {
+		log.Printf("startup expire-due: %v", err)
 	}
 
 	srv := &http.Server{
