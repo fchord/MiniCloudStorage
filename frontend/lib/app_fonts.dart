@@ -28,7 +28,7 @@ void warmupCjkGlyphs() {
   // Do not iterate U+4E00-9FFF: holes in the subset kick off CanvasKit's
   // gstatic Noto download and stall startup. Static UI copy only.
   shapeCjk(
-    '文件保存到期自动删除上传中密码下载点击选择最大需要访问勾选分配四位数字开始详情短码加载字体正在分片成功失败合并重试分段并行路名大小时间天后确认取消过期管理登录后台进行中已完成已取消失败存储路径预定明文原因',
+    '文件保存到期自动删除上传中密码下载点击选择最大需要访问勾选分配四位数字开始详情短码加载字体正在分片成功失败合并重试分段并行路名大小时间天后确认取消过期管理登录后台进行中已完成已取消失败存储路径预定明文原因链接',
   );
   shapeCjk(
     '的一是不了人我在有他这中大为上个国们来到时大地为子出就分生会可主发年动同工也能下过己经',

@@ -1,10 +1,12 @@
 import 'dart:async';
+import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:minicloudstorage/admin_api.dart';
 import 'package:minicloudstorage/api.dart';
 import 'package:minicloudstorage/app_fonts.dart';
+import 'package:web/web.dart' as web;
 
 class AdminPage extends StatefulWidget {
   const AdminPage({super.key});
@@ -390,6 +392,9 @@ class _ColSpec {
   final bool numeric;
 }
 
+const _kColFloor = 56.0;
+const _kResizeHandleW = 8.0;
+
 class _AdminTable extends StatefulWidget {
   const _AdminTable({
     required this.tab,
@@ -410,8 +415,17 @@ class _AdminTable extends StatefulWidget {
 class _AdminTableState extends State<_AdminTable> {
   final _hScroll = ScrollController();
   final _vScroll = ScrollController();
+  List<double>? _customWidths;
 
   static const _hPad = 16.0;
+
+  @override
+  void didUpdateWidget(covariant _AdminTable oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.tab != widget.tab) {
+      _customWidths = null;
+    }
+  }
 
   @override
   void dispose() {
@@ -425,57 +439,58 @@ class _AdminTableState extends State<_AdminTable> {
       case 'in_progress':
         return const [
           _ColSpec('文件名', minWidth: 180, flex: 2),
-          _ColSpec('大小', minWidth: 88, numeric: true),
+          _ColSpec('大小', minWidth: 120, numeric: true),
           _ColSpec('存储路径', minWidth: 280, flex: 3),
-          _ColSpec('上传时间', minWidth: 148),
-          _ColSpec('下载密码', minWidth: 100),
-          _ColSpec('删除', minWidth: 72),
+          _ColSpec('上传时间', minWidth: 160),
+          _ColSpec('下载密码', minWidth: 112),
+          _ColSpec('删除', minWidth: 80),
         ];
       case 'completed':
         return const [
           _ColSpec('文件名', minWidth: 180, flex: 2),
-          _ColSpec('大小', minWidth: 88, numeric: true),
+          _ColSpec('大小', minWidth: 120, numeric: true),
           _ColSpec('存储路径', minWidth: 280, flex: 3),
-          _ColSpec('上传时间', minWidth: 148),
-          _ColSpec('预定删除', minWidth: 148),
-          _ColSpec('下载密码', minWidth: 100),
-          _ColSpec('取消密码', minWidth: 96),
-          _ColSpec('删除', minWidth: 72),
+          _ColSpec('上传时间', minWidth: 160),
+          _ColSpec('预定删除', minWidth: 160),
+          _ColSpec('下载密码', minWidth: 112),
+          _ColSpec('取消密码', minWidth: 128),
+          _ColSpec('下载链接', minWidth: 120),
+          _ColSpec('删除', minWidth: 80),
         ];
       case 'expired':
         return const [
           _ColSpec('文件名', minWidth: 180, flex: 2),
-          _ColSpec('大小', minWidth: 88, numeric: true),
+          _ColSpec('大小', minWidth: 120, numeric: true),
           _ColSpec('路径', minWidth: 200, flex: 2),
-          _ColSpec('上传时间', minWidth: 148),
-          _ColSpec('预定删除', minWidth: 148),
-          _ColSpec('密码', minWidth: 88),
-          _ColSpec('删除', minWidth: 72),
+          _ColSpec('上传时间', minWidth: 160),
+          _ColSpec('预定删除', minWidth: 160),
+          _ColSpec('密码', minWidth: 100),
+          _ColSpec('删除', minWidth: 80),
         ];
       case 'other_failed':
         return const [
           _ColSpec('文件名', minWidth: 180, flex: 2),
-          _ColSpec('大小', minWidth: 88, numeric: true),
+          _ColSpec('大小', minWidth: 120, numeric: true),
           _ColSpec('路径', minWidth: 200, flex: 2),
-          _ColSpec('上传时间', minWidth: 148),
-          _ColSpec('密码', minWidth: 88),
+          _ColSpec('上传时间', minWidth: 160),
+          _ColSpec('密码', minWidth: 100),
           _ColSpec('原因', minWidth: 120, flex: 1),
-          _ColSpec('删除', minWidth: 72),
+          _ColSpec('删除', minWidth: 80),
         ];
       case 'cancelled':
       default:
         return const [
           _ColSpec('文件名', minWidth: 180, flex: 2),
-          _ColSpec('大小', minWidth: 88, numeric: true),
+          _ColSpec('大小', minWidth: 120, numeric: true),
           _ColSpec('路径', minWidth: 200, flex: 2),
-          _ColSpec('上传时间', minWidth: 148),
-          _ColSpec('密码', minWidth: 88),
-          _ColSpec('删除', minWidth: 72),
+          _ColSpec('上传时间', minWidth: 160),
+          _ColSpec('密码', minWidth: 100),
+          _ColSpec('删除', minWidth: 80),
         ];
     }
   }
 
-  List<double> _colWidths(List<_ColSpec> cols, double viewport) {
+  List<double> _defaultWidths(List<_ColSpec> cols, double viewport) {
     final minTotal = cols.fold<double>(0, (s, c) => s + c.minWidth);
     final extra = viewport > minTotal ? viewport - minTotal : 0.0;
     final flexTotal = cols.fold<int>(0, (s, c) => s + c.flex);
@@ -483,6 +498,23 @@ class _AdminTableState extends State<_AdminTable> {
       for (final c in cols)
         c.minWidth + (flexTotal == 0 || extra == 0 ? 0.0 : extra * c.flex / flexTotal),
     ];
+  }
+
+  List<double> _effectiveWidths(List<_ColSpec> cols, double viewport) {
+    final custom = _customWidths;
+    if (custom != null && custom.length == cols.length) {
+      return List<double>.from(custom);
+    }
+    return _defaultWidths(cols, viewport);
+  }
+
+  void _resizeColumn(int index, double delta, List<double> current, List<_ColSpec> cols) {
+    if (index < 0 || index >= cols.length) return;
+    setState(() {
+      final next = List<double>.from(_customWidths ?? current);
+      next[index] = math.max(_kColFloor, next[index] + delta);
+      _customWidths = next;
+    });
   }
 
   @override
@@ -502,7 +534,7 @@ class _AdminTableState extends State<_AdminTable> {
     return LayoutBuilder(
       builder: (context, constraints) {
         final inner = (constraints.maxWidth - _hPad * 2).clamp(0.0, double.infinity);
-        final widths = _colWidths(cols, inner);
+        final widths = _effectiveWidths(cols, inner);
         final tableW = widths.fold<double>(0, (s, w) => s + w);
         return Scrollbar(
           controller: _hScroll,
@@ -525,11 +557,10 @@ class _AdminTableState extends State<_AdminTable> {
                           bottom: BorderSide(color: scheme.outlineVariant),
                         ),
                       ),
-                      child: _cellsRow(
+                      child: _headerRow(
                         widths: widths,
                         cols: cols,
                         style: headingStyle,
-                        cells: [for (final c in cols) Text(c.label)],
                       ),
                     ),
                     Expanded(
@@ -562,6 +593,53 @@ class _AdminTableState extends State<_AdminTable> {
           ),
         );
       },
+    );
+  }
+
+  Widget _headerRow({
+    required List<double> widths,
+    required List<_ColSpec> cols,
+    required TextStyle style,
+  }) {
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.center,
+      children: [
+        for (var i = 0; i < cols.length; i++)
+          SizedBox(
+            width: widths[i],
+            height: 44,
+            child: Stack(
+              children: [
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(12, 10, 12, 10),
+                  child: Align(
+                    alignment: cols[i].numeric ? Alignment.centerRight : Alignment.centerLeft,
+                    child: Text(
+                      cols[i].label,
+                      style: style,
+                      maxLines: 1,
+                      softWrap: false,
+                      overflow: TextOverflow.clip,
+                    ),
+                  ),
+                ),
+                Positioned(
+                  right: 0,
+                  top: 0,
+                  bottom: 0,
+                  width: _kResizeHandleW,
+                  child: MouseRegion(
+                    cursor: SystemMouseCursors.resizeColumn,
+                    child: GestureDetector(
+                      behavior: HitTestBehavior.opaque,
+                      onHorizontalDragUpdate: (d) => _resizeColumn(i, d.delta.dx, widths, cols),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+      ],
     );
   }
 
@@ -601,46 +679,47 @@ class _AdminTableState extends State<_AdminTable> {
     final reason = row.reasonCode.isEmpty ? '—' : row.reasonCode;
 
     final cells = <Widget>[
-      SelectableText(row.filename),
-      Text(size),
-      SelectableText(path),
-      Text(created),
+      SelectableText(row.filename, maxLines: 1),
+      Text(size, maxLines: 1, softWrap: false),
+      SelectableText(path, maxLines: 1),
+      Text(created, maxLines: 1, softWrap: false),
     ];
 
     switch (widget.tab) {
       case 'in_progress':
         cells.addAll([
-          SelectableText(password),
+          SelectableText(password, maxLines: 1),
           _deleteButton(row),
         ]);
       case 'completed':
         cells.addAll([
-          Text(expires),
-          SelectableText(password),
+          Text(expires, maxLines: 1, softWrap: false),
+          SelectableText(password, maxLines: 1),
           row.password.isEmpty
               ? const SizedBox.shrink()
               : TextButton(
                   style: _actionStyle,
                   onPressed: () => widget.onClearPassword(row),
-                  child: const Text('取消密码'),
+                  child: const Text('取消密码', maxLines: 1, softWrap: false),
                 ),
+          _downloadLink(row),
           _deleteButton(row),
         ]);
       case 'expired':
         cells.addAll([
-          Text(expires),
-          SelectableText(password),
+          Text(expires, maxLines: 1, softWrap: false),
+          SelectableText(password, maxLines: 1),
           _deleteButton(row),
         ]);
       case 'other_failed':
         cells.addAll([
-          SelectableText(password),
-          SelectableText(reason),
+          SelectableText(password, maxLines: 1),
+          SelectableText(reason, maxLines: 1),
           _deleteButton(row),
         ]);
       default:
         cells.addAll([
-          SelectableText(password),
+          SelectableText(password, maxLines: 1),
           _deleteButton(row),
         ]);
     }
@@ -657,7 +736,37 @@ class _AdminTableState extends State<_AdminTable> {
     return TextButton(
       style: _actionStyle,
       onPressed: () => widget.onDelete(row),
-      child: const Text('删除'),
+      child: const Text('删除', maxLines: 1, softWrap: false),
+    );
+  }
+
+  String _fileDetailUrl(AdminRecord row) {
+    final origin = web.window.location.origin;
+    final base = Uri.parse('$origin/${row.code}');
+    if (row.password.isEmpty) return base.toString();
+    return base.replace(queryParameters: {'p': row.password}).toString();
+  }
+
+  Widget _downloadLink(AdminRecord row) {
+    if (row.code.isEmpty) return const Text('—');
+    final url = _fileDetailUrl(row);
+    final color = Theme.of(context).colorScheme.primary;
+    return MouseRegion(
+      cursor: SystemMouseCursors.click,
+      child: GestureDetector(
+        onTap: () => web.window.open(url, '_blank'),
+        child: Text(
+          row.code,
+          maxLines: 1,
+          softWrap: false,
+          overflow: TextOverflow.ellipsis,
+          style: TextStyle(
+            color: color,
+            decoration: TextDecoration.underline,
+            decorationColor: color,
+          ),
+        ),
+      ),
     );
   }
 }

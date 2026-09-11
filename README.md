@@ -1,6 +1,6 @@
 # MiniCloudStorage
 
-匿名临时网盘：文件保存 7 天，单文件最大 1GB，上传后用短码访问。
+匿名临时网盘：文件保存 7 天，单文件最大 4GB，上传后用短码访问。
 
 公网地址：https://minicloudstorage.19121122.xyz
 

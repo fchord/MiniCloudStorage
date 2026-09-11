@@ -14,7 +14,7 @@ import 'package:minicloudstorage/widgets/chunk_progress_bar.dart';
 import 'package:minicloudstorage/widgets/page_shell.dart';
 import 'package:web/web.dart' as web;
 
-const maxSize = 1 << 30;
+const maxSize = 4 * 1024 * 1024 * 1024;
 const kUploadParallelism = 4;
 const kChunkRetries = 3;
 
@@ -143,7 +143,7 @@ class _UploadPageState extends State<UploadPage> {
     if (file == null) return;
     if (file.size <= 0 || file.size > maxSize) {
       setState(() => _file = null);
-      _error.value = '文件大小必须大于 0 且不超过 1GB';
+      _error.value = '文件大小必须大于 0 且不超过 4GB';
       _done.value = null;
       _resetBar();
       _status.value = null;
@@ -521,7 +521,7 @@ class _UploadPageState extends State<UploadPage> {
   String _humanError(ApiException e) {
     switch (e.code) {
       case 'invalid_size':
-        return '文件大小不符合要求（最大 1GB）';
+        return '文件大小不符合要求（最大 4GB）';
       case 'invalid_filename':
         return '文件名不合法';
       case 'missing_chunks':
@@ -546,7 +546,7 @@ class _UploadPageState extends State<UploadPage> {
   Widget build(BuildContext context) {
     return PageShell(
       title: 'MiniCloudStorage',
-      subtitle: '文件保存 7 天，到期自动删除。一次选择一个文件，最大 1GB。',
+      subtitle: '文件保存 7 天，到期自动删除。一次选择一个文件，最大 4GB。',
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
@@ -872,7 +872,7 @@ class _PickerCard extends StatelessWidget {
               ),
               const SizedBox(height: 6),
               Text(
-                file == null ? '最大 1GB，仅可选一个文件' : _formatBytes(file!.size),
+                file == null ? '最大 4GB，仅可选一个文件' : _formatBytes(file!.size),
                 style: Theme.of(context).textTheme.bodySmall,
               ),
             ],

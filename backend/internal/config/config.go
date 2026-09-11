@@ -46,7 +46,7 @@ func Load() (Config, error) {
 	if err != nil {
 		return cfg, err
 	}
-	cfg.MaxSize, err = envInt("MAX_SIZE", 1<<30)
+	cfg.MaxSize, err = envInt("MAX_SIZE", 4<<30)
 	if err != nil {
 		return cfg, err
 	}
