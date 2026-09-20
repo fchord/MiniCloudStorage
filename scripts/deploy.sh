@@ -21,7 +21,7 @@ fi
 python3 - <<'PY'
 import base64
 from pathlib import Path
-root = Path("/home/liuzhi/work/mini_cloud_storage")
+root = Path("/mnt/wsl/PhysicalDrive3/in-house_project/mini_cloud_storage")
 password = (root / "deploy/postgres/.app_password").read_text().strip()
 url = f"postgres://minicloudstorage:{password}@192.168.43.111:5432/minicloudstorage?sslmode=disable"
 b64 = base64.b64encode(url.encode()).decode()

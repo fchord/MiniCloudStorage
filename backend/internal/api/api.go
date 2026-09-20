@@ -101,13 +101,16 @@ func (h *Handler) Router() http.Handler {
 }
 
 func (h *Handler) health(w http.ResponseWriter, r *http.Request) {
-	ctx := r.Context()
+	// Independent of kubelet's probe deadline: always answer quickly so
+	// a stuck postgres/filer ping cannot take the LAN vhost NotReady.
+	ctx, cancel := context.WithTimeout(context.Background(), 2*time.Second)
+	defer cancel()
 	if err := h.store.Ping(ctx); err != nil {
-		writeJSON(w, http.StatusServiceUnavailable, map[string]string{"status": "degraded", "db": err.Error()})
+		writeJSON(w, http.StatusOK, map[string]string{"status": "degraded", "db": err.Error()})
 		return
 	}
 	if err := h.filer.Ping(ctx); err != nil {
-		writeJSON(w, http.StatusServiceUnavailable, map[string]string{"status": "degraded", "filer": err.Error()})
+		writeJSON(w, http.StatusOK, map[string]string{"status": "degraded", "filer": err.Error()})
 		return
 	}
 	writeJSON(w, http.StatusOK, map[string]string{"status": "ok"})

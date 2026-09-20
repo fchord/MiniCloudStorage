@@ -68,12 +68,15 @@ spec:
               port: 18080
             initialDelaySeconds: 3
             periodSeconds: 10
+            timeoutSeconds: 5
+            failureThreshold: 3
           livenessProbe:
-            httpGet:
-              path: /api/v1/health
+            tcpSocket:
               port: 18080
             initialDelaySeconds: 10
             periodSeconds: 20
+            timeoutSeconds: 3
+            failureThreshold: 3
           volumeMounts:
             - name: app
               mountPath: /app
@@ -81,7 +84,7 @@ spec:
       volumes:
         - name: app
           hostPath:
-            path: /home/liuzhi/work/mini_cloud_storage/dist
+            path: /mnt/wsl/PhysicalDrive3/in-house_project/mini_cloud_storage/dist
             type: Directory
 ---
 apiVersion: v1
@@ -158,5 +161,5 @@ spec:
           volumes:
             - name: app
               hostPath:
-                path: /home/liuzhi/work/mini_cloud_storage/dist
+                path: /mnt/wsl/PhysicalDrive3/in-house_project/mini_cloud_storage/dist
                 type: Directory
