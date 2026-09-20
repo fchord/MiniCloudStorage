@@ -42,4 +42,10 @@ bash scripts/deploy.sh
 
 ## 配置
 
-应用通过环境变量读取连接信息。`DATABASE_URL` 放在 namespace 内 Secret `postgres`，不要写进公共 ConfigMap。
+应用通过环境变量读取连接与运行参数（见 `backend/internal/config/config.go`）。
+
+本地可复制示例文件：
+
+```bash
+cp .env.example .env
+# 编辑 .env 填入真实值；不要把 .env 提交进 git
