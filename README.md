@@ -25,6 +25,7 @@
 - `deploy/k8s/` Namespace、Quota、Deployment、CronJob
 - `deploy/postgres/init.sh` 创建独立库和用户
 - `deploy/nginx/` 独立 vhost；`nginx-test-pod.yaml` 把 conf 挂进现有 nginx-test
+- `docs/architecture.md` 架构与数据流（组件、上传/下载、隔离边界）
 
 ## 本机构建与部署（当前集群）
 
@@ -99,3 +100,4 @@ bash scripts/deploy.sh
 若无则生成 deploy/k8s/.admin_password，写出 admin.secret.local.yaml
 kubectl apply 上述 Secret 与 app.yaml，并滚动重启 API
 因此：重新部署时跑 README「本机构建与部署」里的脚本即可；Secret 由 deploy.sh 维护，一般不必在仪表盘里手工逐个创建，也不必从 .env 再复制到集群。
+
