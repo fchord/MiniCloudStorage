@@ -25,3 +25,33 @@
   → Service/Pod：Go API（namespace minicloudstorage）
        ├─ 读/写 PostgreSQL（元数据）
        └─ 读/写 SeaweedFS Filer（`/minicloudstorage/` 下 files/ 与 tmp/）
+```
+
+## 管理维护页
+
+/admin/setup 仅内网 Host（如 192.168.43.111）可开，不走公网域名策略。
+
+## 上传主路径
+
+前端发起分块上传（chunk），API 将分片落到 Filer 前缀下的 tmp/。
+全部块齐后，API 在库中写入元数据（含短码、过期等），对象落到 files/。
+返回短码；用户之后用短码打开下载页。
+可选：上传可带访问密码（实现细节见代码；属产品能力，不改变上述分层）。
+
+## 下载主路径（短码）
+
+浏览器打开短码对应页面 → 调 API。
+API 查 Postgres：短码是否存在、是否过期、是否需密码。
+通过则从 SeaweedFS 流式读出文件内容返回。
+
+## 过期与清理
+
+业务上文件约保留 7 天（TTL 部分在代码常量 / Seaweed TTL 环境变量中配置）。
+集群内 CronJob（deploy/k8s/app.yaml 中 cleanup）周期性跑 API 的清理模式，删过期元数据与对象。
+
+## 部署形态（当前）
+
+API 跑在 namespace minicloudstorage；二进制经 hostPath 挂到 master 上的 dist（见 README 部署说明）。
+Postgres 在 master 本机，不在集群内。
+敏感配置：DATABASE_URL、ADMIN_PASSWORD 来自 Secret；细节见 README「配置」。
+一页读完即可上手改代码或排障；更细的接口列表以代码与后续文档为准。
