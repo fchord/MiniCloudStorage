@@ -64,10 +64,38 @@ bash scripts/deploy.sh
 
 键名示例见仓库根目录 `.env.example`。文件保留时长等业务 TTL（如 7 天）部分写在代码常量里，不是环境变量。
 
+
 ### 路径 A：本地开发（可选）
-
 仅在本机直接跑进程、需要用文件喂环境变量时使用：
-
 ```bash
 cp .env.example .env
 # 编辑 .env，把 CHANGE_ME 等改成真实值
+```
+.env 已被 .gitignore 忽略，不要提交
+此路径与集群无关；没有 .env 也可以照常按下面路径 B 部署
+
+### 路径 B：当前 K8s 生产（实际在用）
+Pod 通过 deploy/k8s/app.yaml 注入环境变量：
+
+| 变量 | 来源 |
+| --- | --- |
+| DATABASE_URL | Secret postgres，键 url（namespace minicloudstorage）|
+| ADMIN_PASSWORD | Secret admin，键 password |
+| 其余非敏感项 | 多在 app.yaml 的 env.value 中写死或带默认 |
+
+不要把真实密码写进公共 ConfigMap，也不要假设「先有 .env 再拷进集群」。
+
+本仓库用脚本生成并 apply Secret（生成物已 gitignore）：
+```bash
+bash deploy/postgres/init.sh
+```
+准备独立库/角色
+本机写入 deploy/postgres/.app_password（gitignore）
+```bash
+bash scripts/build.sh
+bash scripts/deploy.sh
+```
+用 .app_password 拼出 DATABASE_URL，写出 deploy/k8s/secret.local.yaml
+若无则生成 deploy/k8s/.admin_password，写出 admin.secret.local.yaml
+kubectl apply 上述 Secret 与 app.yaml，并滚动重启 API
+因此：重新部署时跑 README「本机构建与部署」里的脚本即可；Secret 由 deploy.sh 维护，一般不必在仪表盘里手工逐个创建，也不必从 .env 再复制到集群。
