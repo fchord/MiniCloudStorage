@@ -42,10 +42,32 @@ bash scripts/deploy.sh
 
 ## 配置
 
-应用通过环境变量读取连接与运行参数（见 `backend/internal/config/config.go`）。
+应用通过环境变量读取连接与运行参数（见 `backend/internal/config/config.go`）。  
+**本地 `.env` 与集群 Secret 是两条平行路径**，当前生产部署不依赖 `.env`。
 
-本地可复制示例文件：
+### 应用识别的变量
+
+| 变量 | 必填 | 默认（未设置时） | 说明 |
+| --- | --- | --- | --- |
+| `DATABASE_URL` | 是 | （无） | Postgres 连接串 |
+| `ADMIN_PASSWORD` | 否 | 空 | 管理相关密码 |
+| `LISTEN_ADDR` | 否 | `:8080` | HTTP 监听地址（集群 Deployment 中为 `:18080`） |
+| `PUBLIC_BASE_URL` | 否 | `https://minicloudstorage.19121122.xyz` | 对外访问根 URL |
+| `STATIC_DIR` | 否 | `/app/static` | 前端静态文件目录 |
+| `SEAWEEDFS_FILER_URL` | 否 | 集群内 Filer 服务地址 | SeaweedFS Filer |
+| `SEAWEEDFS_PREFIX` | 否 | `/minicloudstorage` | Filer 路径前缀 |
+| `SEAWEEDFS_COLLECTION` | 否 | `minicloudstorage` | Seaweed collection |
+| `SEAWEEDFS_FILE_TTL` | 否 | `8d` | 正式文件 TTL |
+| `SEAWEEDFS_TMP_TTL` | 否 | `2d` | 临时分片 TTL |
+| `CHUNK_SIZE` | 否 | `8388608`（8MiB） | 分块大小（字节） |
+| `MAX_SIZE` | 否 | `4294967296`（4GiB） | 单文件上限（字节） |
+
+键名示例见仓库根目录 `.env.example`。文件保留时长等业务 TTL（如 7 天）部分写在代码常量里，不是环境变量。
+
+### 路径 A：本地开发（可选）
+
+仅在本机直接跑进程、需要用文件喂环境变量时使用：
 
 ```bash
 cp .env.example .env
-# 编辑 .env 填入真实值；不要把 .env 提交进 git
+# 编辑 .env，把 CHANGE_ME 等改成真实值
