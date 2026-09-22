@@ -1,0 +1,36 @@
+name: 任务
+description: 功能、文档、运维、技术债等一般工作单
+title: "[task] "
+labels: []
+body:
+  - type: textarea
+    id: background
+    attributes:
+      label: 背景
+      description: 为什么要做
+      placeholder: 现状 / 触发原因
+    validations:
+      required: true
+  - type: textarea
+    id: goal
+    attributes:
+      label: 目标
+      description: 做完长什么样
+    validations:
+      required: true
+  - type: textarea
+    id: acceptance
+    attributes:
+      label: 验收标准
+      description: 可勾选的完成条件
+      value: |
+        - [ ]
+    validations:
+      required: true
+  - type: textarea
+    id: notes
+    attributes:
+      label: 备注
+      description: 可选
+    validations:
+      required: false
